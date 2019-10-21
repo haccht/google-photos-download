@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	photoslibrary "github.com/nekr0z/gphotoslibrary"
@@ -32,7 +33,7 @@ func getPhotosLibraryService() (*photoslibrary.Service, error) {
 	return service, nil
 }
 
-func download(item *photoslibrary.MediaItem, dirPath string) error {
+func download(item *photoslibrary.MediaItem, itemMap map[string]bool, dirPath string) error {
 	creationTime, err := time.Parse(time.RFC3339, item.MediaMetadata.CreationTime)
 	if err != nil {
 		return err
@@ -49,9 +50,12 @@ func download(item *photoslibrary.MediaItem, dirPath string) error {
 		return err
 	}
 
-	// TODO: Add feature to download files with same filenames and different IDs.
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		log.Printf("Downloading \"%s\"\n", item.Filename)
+		if _, ok := itemMap[filepath]; ok {
+			extname := path.Ext(filepath)
+			filepath = strings.TrimSuffix(filepath, extname) + "-" + item.Id + extname
+		}
+		log.Printf("Downloading \"%s\"\n", filepath)
 
 		mediaUrl := item.BaseUrl
 		if item.MediaMetadata.Photo == nil {
@@ -80,6 +84,7 @@ func download(item *photoslibrary.MediaItem, dirPath string) error {
 		log.Printf("File already exists: \"%s\"\n", item.Filename)
 	}
 
+	itemMap[filepath] = true
 	return nil
 }
 
@@ -116,6 +121,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirPath string) error {
 		}
 	}()
 
+	itemMap := make(map[string]bool)
 	for {
 		select {
 		case item, ok := <-mediaChan:
@@ -123,7 +129,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirPath string) error {
 				break
 			}
 
-			err := download(item, dirPath)
+			err := download(item, itemMap, dirPath)
 			if err != nil {
 				log.Printf("Unable to download media item: %s\n", err)
 			}
