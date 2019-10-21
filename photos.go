@@ -111,6 +111,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 					}
 				}
 				errorChan <- err
+				return
 			}
 
 			for _, mediaItem := range resp.MediaItems {
