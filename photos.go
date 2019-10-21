@@ -33,28 +33,31 @@ func getPhotosLibraryService() (*photoslibrary.Service, error) {
 	return service, nil
 }
 
-func download(item *photoslibrary.MediaItem, itemMap map[string]bool, dirPath string) error {
+func download(item *photoslibrary.MediaItem, itemMap map[string]string, rootDirpath string) error {
 	creationTime, err := time.Parse(time.RFC3339, item.MediaMetadata.CreationTime)
 	if err != nil {
 		return err
 	}
 
-	filepath := path.Join(
-		dirPath,
+	dirpath := path.Join(
+		rootDirpath,
 		fmt.Sprintf("%04d", creationTime.Year()),
 		fmt.Sprintf("%02d", creationTime.Month()),
-		item.Filename,
 	)
 
-	if err := os.MkdirAll(path.Dir(filepath), 0755); err != nil {
+	if err := os.MkdirAll(dirpath, 0755); err != nil {
 		return err
 	}
 
+	filename := item.Filename
+	filepath := path.Join(dirpath, filename)
+	if id, ok := itemMap[filepath]; ok && id != item.Id {
+		extname := path.Ext(filepath)
+		filename = strings.TrimSuffix(filename, extname) + "-" + item.Id + extname
+		filepath = path.Join(dirpath, filename)
+	}
+
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		if _, ok := itemMap[filepath]; ok {
-			extname := path.Ext(filepath)
-			filepath = strings.TrimSuffix(filepath, extname) + "-" + item.Id + extname
-		}
 		log.Printf("Downloading \"%s\"\n", filepath)
 
 		mediaUrl := item.BaseUrl
@@ -81,14 +84,14 @@ func download(item *photoslibrary.MediaItem, itemMap map[string]bool, dirPath st
 			return err
 		}
 	} else {
-		log.Printf("File already exists: \"%s\"\n", item.Filename)
+		log.Printf("File already exists: \"%s\"\n", filepath)
 	}
 
-	itemMap[filepath] = true
+	itemMap[filepath] = item.Id
 	return nil
 }
 
-func DownloadPhotos(service *photoslibrary.Service, dirPath string) error {
+func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 	mediaItemsService := photoslibrary.NewMediaItemsService(service)
 
 	mediaChan := make(chan *photoslibrary.MediaItem, 100)
@@ -121,7 +124,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirPath string) error {
 		}
 	}()
 
-	itemMap := make(map[string]bool)
+	itemMap := make(map[string]string)
 	for {
 		select {
 		case item, ok := <-mediaChan:
@@ -129,7 +132,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirPath string) error {
 				break
 			}
 
-			err := download(item, itemMap, dirPath)
+			err := download(item, itemMap, dirpath)
 			if err != nil {
 				log.Printf("Unable to download media item: %s\n", err)
 			}
