@@ -58,7 +58,7 @@ func download(item *photoslibrary.MediaItem, itemMap map[string]string, rootDirp
 	}
 
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		log.Printf("Downloading \"%s\"\n", filepath)
+		log.Printf("Downloading \"%s\"", filepath)
 
 		mediaUrl := item.BaseUrl
 		if item.MediaMetadata.Photo == nil {
@@ -84,7 +84,7 @@ func download(item *photoslibrary.MediaItem, itemMap map[string]string, rootDirp
 			return err
 		}
 	} else {
-		log.Printf("File already exists: \"%s\"\n", filepath)
+		log.Printf("File already exists: \"%s\"", filepath)
 	}
 
 	itemMap[filepath] = item.Id
@@ -106,7 +106,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 				if apiError, ok := err.(*googleapi.Error); ok {
 					switch apiError.Code {
 					case 429, 500, 502, 503:
-						log.Printf("Unable to read media items: %s\n", err)
+						log.Printf("Unable to read media items: %s", err)
 						continue
 					}
 				}
@@ -121,7 +121,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 			pageToken = resp.NextPageToken
 			if pageToken == "" {
 				close(mediaChan)
-				break
+				return
 			}
 		}
 	}()
@@ -131,17 +131,17 @@ func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 		select {
 		case item, ok := <-mediaChan:
 			if !ok {
-				break
+				log.Printf("Finish downloading all media items")
+				return nil
 			}
 
 			err := download(item, itemMap, dirpath)
 			if err != nil {
-				log.Printf("Unable to download media item: %s\n", err)
+				log.Printf("Unable to download media item: %s", err)
+				return nil
 			}
 		case err := <-errorChan:
 			return err
 		}
 	}
-
-	return nil
 }
