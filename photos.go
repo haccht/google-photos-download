@@ -121,6 +121,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 			pageToken = resp.NextPageToken
 			if pageToken == "" {
 				close(mediaChan)
+				break
 			}
 		}
 	}()
