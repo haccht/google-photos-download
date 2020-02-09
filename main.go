@@ -9,7 +9,6 @@ import (
 
 var (
 	secretFile = "client_secret.json"
-
 	cacheToken = flag.Bool("cachetoken", true, "Cache the OAuth 2.0 token")
 )
 
@@ -28,7 +27,7 @@ func main() {
 		log.Fatalf("Unable to get photoslibrary: %v", err)
 	}
 
-	if err := DownloadPhotos(service, dirPath); err != nil {
+	if err := downloadAllPhotos(service, dirPath); err != nil {
 		log.Fatalf("Unable to download media item: %v", err)
 	}
 }

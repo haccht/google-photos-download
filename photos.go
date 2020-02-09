@@ -33,7 +33,7 @@ func getPhotosLibraryService() (*photoslibrary.Service, error) {
 	return service, nil
 }
 
-func download(item *photoslibrary.MediaItem, itemMap map[string]string, rootDirpath string) error {
+func downloadPhoto(item *photoslibrary.MediaItem, itemMap map[string]string, rootDirpath string) error {
 	creationTime, err := time.Parse(time.RFC3339, item.MediaMetadata.CreationTime)
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func download(item *photoslibrary.MediaItem, itemMap map[string]string, rootDirp
 	return nil
 }
 
-func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
+func downloadAllPhotos(service *photoslibrary.Service, dirpath string) error {
 	mediaItemsService := photoslibrary.NewMediaItemsService(service)
 
 	mediaChan := make(chan *photoslibrary.MediaItem, 100)
@@ -135,7 +135,7 @@ func DownloadPhotos(service *photoslibrary.Service, dirpath string) error {
 				return nil
 			}
 
-			err := download(item, itemMap, dirpath)
+			err := downloadPhoto(item, itemMap, dirpath)
 			if err != nil {
 				log.Printf("Unable to download media item: %s", err)
 				return nil
